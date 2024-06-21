@@ -1,122 +1,111 @@
-from bs4 import BeautifulSoup
-from pdfminer.high_level import extract_text
+from flask import Flask, render_template, request, redirect
+from werkzeug.utils import secure_filename
+import os
 import database
-import re
-import time
 
-if __name__ == "__main__":
-    def retry_click(element):
-        max_retries = 3
-        retries = 0
-        while retries < max_retries:
-            try:
-                element.click()
-                break
-            except StaleElementReferenceException:
-                retries += 1
+app = Flask(__name__)
 
-    def wait_for_requisites(driver):
-        try:
-            WebDriverWait(driver, 1).until(EC.presence_of_element_located((By.XPATH, '//strong[text()="Requisites and Restrictions"]')))
-            WebDriverWait(driver, 1).until(EC.staleness_of(driver.find_element(By.XPATH, '//strong[text()="Requisites and Restrictions"]')))
-        except:
-            pass
+# Configure upload folder
+UPLOAD_FOLDER = 'uploads'
+ALLOWED_EXTENSIONS = {'pdf'}
 
-    def get_subject_and_course_number(driver, list_subjects, list_course_numbers):
-        while True:
-            updated_reg_soup = BeautifulSoup(driver.page_source, 'lxml')
-            reg_table = updated_reg_soup.find('table', id='table1')
-            reg_tbody = reg_table.find('tbody')
-            reg_tr = reg_tbody.find_all('tr')
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-            for tr in reg_tr:
-                subject_td = tr.find('td', {'data-content': 'Subject'})
-                course_num_td = tr.find('td', {'data-content': 'Course Number'})
-                if subject_td and course_num_td:
-                    list_subjects.append(subject_td.text.strip())
-                    list_course_numbers.append(course_num_td.text.strip())
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-            next_button = driver.find_elements(By.CSS_SELECTOR, 'button[title="Next"]:not([disabled])')
-            if next_button:
-                next_button[0].click()
-                time.sleep(3)
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            return redirect(request.url)
+        file = request.files['file']
+        if file.filename == '':
+            return redirect(request.url)
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(file_path)
+            recommendations = process_transcript(file_path)
+            return render_template('recommendations.html', recommendations=recommendations)
+
+def process_transcript(file_path):
+    username = extract_text_first_line(file_path)  # Adjusted to use function directly
+    extracted_rows = extract_rows_below_keyword(file_path, 'Subject')  # Adjusted to use function directly
+    
+    if extracted_rows:
+        subjects = []
+        course_numbers = []
+        
+        for item in extracted_rows:
+            if item.isalpha():
+                subject = item
+                subjects.append(subject)
             else:
-                break
+                course_number = item
+                course_numbers.append(course_number)
+        
+        combined_subject_course = [f"{subject} {course_number}" for subject, course_number in zip(subjects, course_numbers)]
+        recommendations = database.recommendation(username)
+        
+        # Add user and courses to the database
+        database.insert_user_and_courses(username, combined_subject_course)
+        
+        return recommendations
+    else:
+        return []
 
-    registrar = 'https://reg-prod.ec.ucmerced.edu/StudentRegistrationSsb/ssb/term/termSelection?mode=search&_gl=1*tpyu75*_ga*Mjg4NjM1MDMwLjE2MTMwNzk1MDE.*_ga_TSE2LSBDQZ*MTcwNjg1NDcwOC44Mi4xLjE3MDY4NTQ4NTAuNjAuMC4w'
-    driver3 = webdriver.Chrome()
-    driver3.get(registrar)
-    reg_soup = BeautifulSoup(driver3.page_source, 'lxml')
-
-    reg_home = WebDriverWait(driver3, 10).until(EC.element_to_be_clickable((By.XPATH, '//a[@href="javascript:void(0)"]')))
-    retry_click(reg_home)
-
-    results_list = WebDriverWait(driver3, 10).until(EC.element_to_be_clickable((By.ID, "select2-results-1")))
-
-    first_item = WebDriverWait(driver3, 10).until(EC.element_to_be_clickable((By.ID, "select2-result-label-2")))
-    retry_click(first_item)
-
-    continue_button = WebDriverWait(driver3, 10).until(EC.element_to_be_clickable((By.ID, "term-go")))
-    retry_click(continue_button)
-
-    subject_drop = WebDriverWait(driver3, 10).until(EC.element_to_be_clickable((By.CLASS_NAME, "select2-choices")))
-    retry_click(subject_drop)
-    cse_select = WebDriverWait(driver3, 10).until(EC.element_to_be_clickable((By.ID, "CSE")))
-    retry_click(cse_select)
-
-    WebDriverWait(driver3, 10).until(EC.presence_of_element_located((By.CLASS_NAME, "form-end-controls")))
-
-    search_button = WebDriverWait(driver3, 10).until(EC.element_to_be_clickable((By.ID, "search-go")))
-    retry_click(search_button)
-
-    page_size = WebDriverWait(driver3, 10).until(EC.element_to_be_clickable((By.CLASS_NAME, "page-size-select")))
-    retry_click(page_size)
-    size_select = Select(WebDriverWait(driver3, 10).until(EC.element_to_be_clickable((By.CLASS_NAME, "page-size-select"))))
-    size_select.select_by_value('50')
-
-    time.sleep(3)
-
-    updated_reg_soup = BeautifulSoup(driver3.page_source, 'lxml')
-
-    WebDriverWait(driver3, 10).until(
-        EC.presence_of_element_located((By.ID, "table1"))
-    )
-
-    term = updated_reg_soup.find('h4', class_='search-results-header').text.split(':')[1].strip()
-
-    reg_table = updated_reg_soup.find('table', id='table1')
-    reg_tbody = reg_table.find('tbody')
-    reg_tr = reg_tbody.find_all('tr')
-
-    courses = []
-    course_num = []
-
-    get_subject_and_course_number(driver3, courses, course_num)
-
-    combined_courses = [f'{subject} {number}' for subject, number in zip(courses, course_num)]
-    combined_courses = list(set(combined_courses))
-    print(combined_courses)
-
-def extract_rows_below_keyword(pdf_path, keyword):
+def extract_text_first_line(file_path):
     try:
-        excluded_words = {'Main', 'List', 'Term', 'GPA', 'CEU', 'and', 'Type', 'End', 'Good', 'Fall', 'ted', 'Enac', 'The', 'New', 'Full', 'Web', 'Lin', 'Alg', 'Diff', 'Eqs', 'Data', 'Art', 'Lab', 'Heal', 'Eng', 'Age', 'with', 'TA-'}
-
+        # Extract text from the PDF file
         with open(pdf_path, 'rb') as file:
             pdf_text = extract_text(file)
 
+        # Split the text into lines
+        lines = pdf_text.split('\n')
+        print(lines) #testing code
+        # Extract the text from the first line
+        if lines:
+            first_line_text = lines[12].strip()
+            return first_line_text
+        else:
+            return None
+
+    except Exception as e:
+        print(f"Error extracting text from PDF: {e}")
+        return None
+
+
+def extract_rows_below_keyword(file_path, keyword):
+    try:
+        # Define the words to exclude
+        excluded_words = {'Main', 'List', 'Term', 'GPA', 'CEU', 'and', 'Type', 'End', 'Good', 'Fall', 'ted', 'Enac', 'The', 'New', 'Full', 'Web', 'Lin', 'Alg', 'Diff', 'Eqs', 'Data', 'Art', 'Lab', 'Heal', 'Eng', 'Age', 'with', 'TA-'}
+
+        # Extract text from the PDF file
+        with open(pdf_path, 'rb') as file:
+            pdf_text = extract_text(file)
+
+        # Split the text into lines
         lines = pdf_text.split('\n')
 
         word_pattern = r'\b[A-Z]{3,4}\b'
 
+        # Search for the keyword
         rows = []
         keyword_found = False
         for line in lines:
             if keyword in line:
                 keyword_found = True
-                continue
-            if keyword_found and line.strip():
+                continue  # Skip the line with the keyword
+            if keyword_found and line.strip():  # Check if keyword was found and the line is not empty
+                # Split the line into words
                 classes = re.findall(word_pattern, line)
                 words = line.split()
+                # Filter words based on length, exclusion list, and characters to exclude
                 filtered_words = []
                 for word in words:
                     if len(word) in (3, 4) and word.strip() not in excluded_words and not any(char in word for char in '/:.'):
@@ -127,6 +116,7 @@ def extract_rows_below_keyword(pdf_path, keyword):
                         else:
                             filtered_words.append(word.strip())
                 rows.extend(filtered_words)
+                # print(filtered_words)
 
         return rows
 
@@ -134,19 +124,5 @@ def extract_rows_below_keyword(pdf_path, keyword):
         print(f"Error extracting text from PDF: {e}")
         return None
 
-def extract_text_first_line(pdf_path):
-    try:
-        with open(pdf_path, 'rb') as file:
-            pdf_text = extract_text(file)
-
-        lines = pdf_text.split('\n')
-        print(lines)
-        if lines:
-            first_line_text = lines[12].strip()
-            return first_line_text
-        else:
-            return None
-
-    except Exception as e:
-        print(f"Error extracting text from PDF: {e}")
-        return None
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=8080)
