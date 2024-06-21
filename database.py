@@ -1,8 +1,9 @@
 import sqlite3
 
-
 conn = sqlite3.connect('course.db')
 c = conn.cursor()
+
+# Check if 'courses' table exists; if not, create necessary tables
 c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='courses'")
 table_exists = c.fetchone()
 
@@ -21,8 +22,8 @@ if not table_exists:
     )""")
 
     c.execute("""CREATE TABLE schedule(
-    course_id INTEGER NOT NULL,
-    FOREIGN KEY (course_id) REFERENCES courses (course_id)
+        course_id INTEGER NOT NULL,
+        FOREIGN KEY (course_id) REFERENCES courses (course_id)
     )""")
 
     c.execute("""CREATE TABLE users(
@@ -34,30 +35,21 @@ if not table_exists:
         course_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
         FOREIGN KEY (course_id) REFERENCES courses (course_id),
-        FOREIGN KEY (user_id) REFERENCES user (id)
+        FOREIGN KEY (user_id) REFERENCES users (id)
     )""")
-
-# conn = sqlite3.connect('course.db')
-# c = conn.cursor()
-
-# # Drop the prerequisites table if it exists
-# c.execute("DROP TABLE IF EXISTS courses")
-# c.execute("DROP TABLE IF EXISTS prerequisites")
-# c.execute("DROP TABLE IF EXISTS user_courses")
-# c.execute("DROP TABLE IF EXISTS schedule")
-# c.execute("DROP TABLE IF EXISTS users")
-
 
 conn.commit()
 conn.close()
 
+# Function to add a course to the 'courses' table
 def add_course(course_code, course_title):
     conn = sqlite3.connect('course.db')
     c = conn.cursor()
     c.execute("INSERT INTO courses (course_code, course_title) VALUES (?, ?)", (course_code, course_title))
-    conn.commit() 
+    conn.commit()
     conn.close()
 
+# Function to check if a course exists in the 'courses' table
 def course_exists(course_code):
     conn = sqlite3.connect('course.db')
     c = conn.cursor()
@@ -66,6 +58,7 @@ def course_exists(course_code):
     conn.close()
     return exists
 
+# Function to add prerequisites for a course
 def add_prerequisites(prereq_course_codes, course_code):
     conn = sqlite3.connect('course.db')
     c = conn.cursor()
@@ -85,6 +78,7 @@ def add_prerequisites(prereq_course_codes, course_code):
     conn.commit()
     conn.close()
 
+# Function to check if a course has prerequisites
 def has_prerequisite(course_code):
     conn = sqlite3.connect('course.db')
     c = conn.cursor()
@@ -100,6 +94,7 @@ def has_prerequisite(course_code):
     conn.close()
     return exists
 
+# Function to add courses to the schedule
 def add_schedule(course_codes):
     conn = sqlite3.connect('course.db')
     c = conn.cursor()
@@ -107,22 +102,20 @@ def add_schedule(course_codes):
     for course_code in course_codes:    
         course_id = c.execute("SELECT course_id FROM courses WHERE course_code = ?", (course_code,)).fetchone()[0]
         c.execute("INSERT INTO schedule (course_id) VALUES (?)", (course_id,))
+
     conn.commit()
     conn.close()
 
+# Function to recommend courses for a user based on their taken courses and prerequisites
 def recommendation(user):
     conn = sqlite3.connect('course.db')
     c = conn.cursor()
 
-    # Get the user ID
     user_id = c.execute("SELECT id FROM users WHERE name = ?", (user,)).fetchone()
-    print("User ID:", user_id)
 
     if not user_id:
-        print("User not found.")
         return []
 
-    # Select courses from the schedule table that the user has not taken
     c.execute("""
         SELECT schedule.course_id, courses.course_code, courses.course_title 
         FROM schedule 
@@ -135,12 +128,9 @@ def recommendation(user):
     """, (user_id[0],))
 
     recommended_courses = c.fetchall()
-    print("Recommended courses before filtering:", recommended_courses)
 
-    # Find the prerequisites for each recommended course
     courses_with_prerequisites = []
     for course_id, course_code, course_title in recommended_courses:
-        # Check if the user has taken all the prerequisites for the course
         c.execute("""
             SELECT prereq_course_id
             FROM prerequisites 
@@ -149,73 +139,60 @@ def recommendation(user):
             SELECT course_id 
             FROM user_courses 
             WHERE user_id = ?
-        """, (course_id, user_id[0]))  #FIX THE TABLE COURSE ID SHOULD BE ON LEFT AND COURSE ID OF PREREQ SHOULD BE ON RIGHT
+        """, (course_id, user_id[0]))
 
         missing_prerequisites = c.fetchall()
-        # print(missing_prerequisites[-1])
 
-        # If there are no missing prerequisites or the last one is -1, add the course
         if not missing_prerequisites or missing_prerequisites[-1][0] == -1:
             courses_with_prerequisites.append((course_id, course_code, course_title))
 
     conn.close()
 
-    print("Recommended courses after filtering prerequisites:", courses_with_prerequisites)
     return courses_with_prerequisites
 
-
-
+# Function to insert a user and their enrolled courses
 def insert_user_and_courses(username, course_codes):
-
     conn = sqlite3.connect('course.db')
     c = conn.cursor()
 
     c.execute("INSERT INTO users (name) VALUES (?)", (username,))
-    user_id = c.lastrowid  # Get the id of the newly inserted user
+    user_id = c.lastrowid
 
-    # Insert course codes into user_courses table
     for course_code in course_codes:
-        # Get the course_id for the given course_code
         course_id = c.execute("SELECT course_id FROM courses WHERE course_code = ?", (course_code,)).fetchone()
         if course_id:
-            # Insert the user_id and course_id into user_courses table
             c.execute("INSERT INTO user_courses (user_id, course_id) VALUES (?, ?)", (user_id, course_id[0]))
 
     conn.commit()
     conn.close()
 
+# Function to add a course for a user
 def add_course_for_user(user, course_code):
     conn = sqlite3.connect('course.db')
     c = conn.cursor()
 
-    # Check if the user exists
     user_id = c.execute("SELECT id FROM users WHERE name = ?", (user,)).fetchone()
     if not user_id:
-        print("User not found.")
         conn.close()
         return
 
-    # Check if the course exists
     course_id = c.execute("SELECT course_id FROM courses WHERE course_code = ?", (course_code,)).fetchone()
     if not course_id:
-        print("Course not found.")
         conn.close()
         return
 
-    # Insert the user_id and course_id into user_courses table
     c.execute("INSERT INTO user_courses (user_id, course_id) VALUES (?, ?)", (user_id[0], course_id[0]))
 
     conn.commit()
     conn.close()
 
+# Function to update the schedule with new courses
 def update_schedule(new_course_codes):
     conn = sqlite3.connect('course.db')
     c = conn.cursor()
 
-    # Clear the existing schedule
     c.execute("DELETE FROM schedule")
 
-    # Insert the new courses into the schedule table
     for course_code in new_course_codes:
         course_id = c.execute("SELECT course_id FROM courses WHERE course_code = ?", (course_code,)).fetchone()
         if course_id:
@@ -223,56 +200,3 @@ def update_schedule(new_course_codes):
 
     conn.commit()
     conn.close()
-
-# courses
-#     id : INTEGER
-#     code : CSE 015, MATH 131
-#     title : Discrete Math
-
-# 111|CSE 111|Database Systems
-
-# prerequisites
-#     course_id : INTEGER
-#     course_code : CSE 015, MATH 131 #not needed
-#     prereq_course_id : INTEGER
-#     prereq_course_code : CSE 015, MATH 131
-
-# CSE 111|CSE 031
-# CSE 111|MATH 024
-# CSE 111|CSE 100
-
-# semesters
-#     id : INTEGER
-#     name : 2024 Spring
-    
-# 11|2024 Spring
-
-# schedule
-#       term : TEXT
-#     course_id : INTEGER
-
-# historical_schedule
-#     term : TEXT
-#     course_id : INTEGER
-
-
-# schedule_historical
-#     course_id : INTEGER
-#     course_code : CSE 015, MATH 131
-#     semester_id : INTEGER
-
-# 111|CSE 111|10
-# 111|CSE 111|8
-
-#users
-    # id : INTEGER
-    # name : TEXT
-
-#user_courses
-    # user_id : INTEGER
-    # course_id : INTEGER
-    # semester_id : INTEGER
-
-#POPULATE THE DATABASES, THEN WORK ON RECOMMENDATION SQL SQUERY THAT CONNECTS USER TAKEN COURSES TO SEMESTER AND PREREQ
-
-
