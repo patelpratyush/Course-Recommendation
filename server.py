@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect
 from werkzeug.utils import secure_filename
 import os
 import database
+import appy
 
 app = Flask(__name__)
 
