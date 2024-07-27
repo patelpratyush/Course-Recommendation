@@ -1,7 +1,10 @@
 from flask import Flask, render_template, request, redirect
 from werkzeug.utils import secure_filename
+from pdfminer.high_level import extract_text
 import os
 import database
+import re
+
 
 app = Flask(__name__)
 
@@ -59,7 +62,7 @@ def process_transcript(file_path):
     else:
         return []
 
-def extract_text_first_line(file_path):
+def extract_text_first_line(pdf_path):
     try:
         # Extract text from the PDF file
         with open(pdf_path, 'rb') as file:
@@ -80,7 +83,7 @@ def extract_text_first_line(file_path):
         return None
 
 
-def extract_rows_below_keyword(file_path, keyword):
+def extract_rows_below_keyword(pdf_path, keyword):
     try:
         # Define the words to exclude
         excluded_words = {'Main', 'List', 'Term', 'GPA', 'CEU', 'and', 'Type', 'End', 'Good', 'Fall', 'ted', 'Enac', 'The', 'New', 'Full', 'Web', 'Lin', 'Alg', 'Diff', 'Eqs', 'Data', 'Art', 'Lab', 'Heal', 'Eng', 'Age', 'with', 'TA-'}
