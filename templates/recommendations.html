@@ -52,68 +52,9 @@
 </head>
 <body>
     <h1>Course Recommendations</h1>
-    <form action="{{ url_for('recommendations') }}" method="post">
-        <select name="courseprefix" id="courseprefix" required>
-            <option value="">Choose a Course Prefix</option>
-            <option value="AE">AE</option>
-            <option value="ANTH">ANTH</option>
-            <option value="BEST">BEST</option>
-            <option value="BIO">BIO</option>
-            <option value="BIOE">BIOE</option>
-            <option value="CCST">CCST</option>
-            <option value="CE">CE</option>
-            <option value="CHEM">CHEM</option>
-            <option value="CHN">CHN</option>
-            <option value="COGS">COGS</option>
-            <option value="CORE">CORE</option>
-            <option value="CRES">CRES</option>
-            <option value="CRS">CRS</option>
-            <option value="CSE">CSE</option>
-            <option value="EC">EC</option>
-            <option value="ECON">ECON</option>
-            <option value="EDUC">EDUC</option>
-            <option value="EE">EE</option>
-            <option value="EECS">EECS</option>
-            <option value="ENG">ENG</option>
-            <option value="ENGR">ENGR</option>
-            <option value="ENVE">ENVE</option>
-            <option value="ES">ES</option>
-            <option value="ESS">ESS</option>
-            <option value="FRE">FRE</option>
-            <option value="GASP">GASP</option>
-            <option value="GEOG">GEOG</option>
-            <option value="GSTU">GSTU</option>
-            <option value="HIST">HIST</option>
-            <option value="HS">HS</option>
-            <option value="IH">IH</option>
-            <option value="JPN">JPN</option>
-            <option value="MATH">MATH</option>
-            <option value="MBSE">MBSE</option>
-            <option value="ME">ME</option>
-            <option value="MGMT">MGMT</option>
-            <option value="MIST">MIST</option>
-            <option value="MSE">MSE</option>
-            <option value="NSED">NSED</option>
-            <option value="NSUS">NSUS</option>
-            <option value="PH">PH</option>
-            <option value="PHIL">PHIL</option>
-            <option value="PHYS">PHYS</option>
-            <option value="POLI">POLI</option>
-            <option value="PSY">PSY</option>
-            <option value="PUBP">PUBP</option>
-            <option value="QSB">QSB</option>
-            <option value="SOC">SOC</option>
-            <option value="SPAN">SPAN</option>
-            <option value="SPRK">SPRK</option>
-            <option value="USTU">USTU</option>
-            <option value="WCH">WCH</option>
-            <option value="WRI">WRI</option>
-        </select>
-        <input type="submit" value="Filter">
-    </form>
     <ul>
         {% for course in recommendations %}
-        <li>{{ course[0] }}: {{ course[1] }}</li>
+        <li>{{ course[1] }}: {{ course[2] }}</li>
         {% endfor %}
     </ul>
 </body>
