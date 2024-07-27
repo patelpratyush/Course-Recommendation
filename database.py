@@ -150,6 +150,39 @@ def recommendation(user):
 
     return courses_with_prerequisites
 
+def get_connection():
+    conn = sqlite3.connect('course.db')
+    return conn
+
+def get_recommendations():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT DISTINCT c.course_code, c.course_title
+        FROM user_courses uc
+        JOIN courses c ON uc.course_id = c.course_id
+        JOIN schedule s ON c.course_id = s.course_id
+        """)
+    recommendations = cursor.fetchall()
+    conn.close()
+    return recommendations
+
+def get_recommendations_by_prefix(prefix):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT DISTINCT c.course_code, c.course_title
+        FROM user_courses uc
+        JOIN courses c ON uc.course_id = c.course_id
+        JOIN schedule s ON c.course_id = s.course_id
+        WHERE c.course_code LIKE ?
+        """, (prefix + '%',))
+    recommendations = cursor.fetchall()
+    conn.close()
+    return recommendations
+
+
+
 # Function to insert a user and their enrolled courses
 def insert_user_and_courses(username, course_codes):
     conn = sqlite3.connect('course.db')

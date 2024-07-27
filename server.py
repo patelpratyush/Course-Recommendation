@@ -19,14 +19,17 @@ def allowed_file(filename):
 def landing():
     return render_template('landing.html')
 
-@app.route('/upload')
+@app.route('/index')
 def index():
     return render_template('index.html')
 
-@app.route('/recommendations')
+@app.route('/recommendations', methods=['GET', 'POST'])
 def recommendations():
-    # This should render the recommendations page. Replace with your logic.
-    recommendations = [("Course 1", "Description 1"), ("Course 2", "Description 2")]
+    if request.method == 'POST':
+        selected_prefix = request.form['courseprefix']
+        recommendations = database.get_recommendations_by_prefix(selected_prefix)
+    else:
+        recommendations = database.get_recommendations()
     return render_template('recommendations.html', recommendations=recommendations)
 
 
