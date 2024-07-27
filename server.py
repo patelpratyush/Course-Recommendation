@@ -16,8 +16,19 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @app.route('/')
+def landing():
+    return render_template('landing.html')
+
+@app.route('/upload')
 def index():
     return render_template('index.html')
+
+@app.route('/recommendations')
+def recommendations():
+    # This should render the recommendations page. Replace with your logic.
+    recommendations = [("Course 1", "Description 1"), ("Course 2", "Description 2")]
+    return render_template('recommendations.html', recommendations=recommendations)
+
 
 @app.route('/upload', methods=['POST'])
 def upload_file():

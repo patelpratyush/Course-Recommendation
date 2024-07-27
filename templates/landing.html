@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Course Recommendations</title>
+    <title>Welcome to Course Recommender</title>
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -15,47 +15,48 @@
             height: 100vh;
             margin: 0;
             animation: fadeIn 2s;
+            color: white;
+            text-align: center;
         }
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
         }
         h1 {
-            color: #fff;
+            font-size: 3em;
             margin-bottom: 20px;
         }
-        ul {
-            list-style: none;
-            padding: 0;
-            width: 80%;
-            max-width: 600px;
-            animation: slideIn 1s ease-in-out;
+        p {
+            font-size: 1.2em;
+            margin-bottom: 40px;
         }
-        @keyframes slideIn {
-            from { transform: translateY(-100%); }
-            to { transform: translateY(0); }
+        .buttons {
+            display: flex;
+            gap: 20px;
         }
-        li {
+        .btn {
             background: rgba(255, 255, 255, 0.2);
             backdrop-filter: blur(10px);
-            padding: 15px;
-            margin: 10px 0;
+            padding: 15px 30px;
             border-radius: 8px;
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
-            color: #fff;
-            transition: transform 0.3s ease;
+            color: white;
+            text-decoration: none;
+            font-size: 1.2em;
+            transition: background 0.3s ease, transform 0.3s ease;
         }
-        li:hover {
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.4);
             transform: scale(1.05);
         }
     </style>
 </head>
 <body>
-    <h1>Course Recommendations</h1>
-    <ul>
-        {% for course in recommendations %}
-        <li>{{ course[1] }}: {{ course[2] }}</li>
-        {% endfor %}
-    </ul>
+    <h1>Welcome to Course Recommender</h1>
+    <p>Your personalized course recommendations are just a few clicks away.</p>
+    <div class="buttons">
+        <a href="{{ url_for('index') }}" class="btn">Upload Transcript</a>
+        <a href="{{ url_for('recommendations') }}" class="btn">View Recommendations</a>
+    </div>
 </body>
 </html>
